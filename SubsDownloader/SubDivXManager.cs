@@ -1,5 +1,6 @@
 ﻿namespace SubsDownloader
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -12,6 +13,8 @@
     {
         public IList<Sub> GetCandidateSubs(Video video)
         {
+            Console.WriteLine("Text used to seach subtitle is: {0}", video.GetSearchString());
+
             var subdivxClient = new WebClient();
             subdivxClient.Headers["User-Agent"] = "Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))";
             var output = subdivxClient.DownloadString(

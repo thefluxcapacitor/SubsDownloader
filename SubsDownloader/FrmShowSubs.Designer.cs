@@ -50,7 +50,7 @@
             this.Controls.Add(this.dataGridView1);
             this.Name = "FrmShowSubs";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "FrmShowSubs";
+            this.Text = "Matching subtitles (double-click to download)";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
 

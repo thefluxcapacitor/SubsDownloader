@@ -60,6 +60,8 @@
                     this.Episode = torrentName.Substring(result.Index + 2, 2);
                 }
             }
+
+            Console.WriteLine("Season: {0}, Episode: {1}", this.Season, this.Episode); 
         }
 
         private bool ParseTvShow(string torrentName)
@@ -77,6 +79,15 @@
                         this.TvShow = true;
                         break;
                     }
+                }
+
+                if (this.TvShow.Value)
+                {
+                    Console.WriteLine("Video evaluated as a TV show: {0}", this.Title);
+                }
+                else
+                {
+                    Console.WriteLine("Video evaluated as a movie: {0}", this.Title);
                 }
             }
 
@@ -119,6 +130,8 @@
                     }
                 }
             }
+
+            Console.WriteLine("Year: {0}", this.Year);
         }
 
         private void ParseReleaseGroup(string torrentName)
@@ -136,6 +149,8 @@
             }
 
             this.ReleaseGroup = releaseGroup;
+
+            Console.WriteLine("ReleaseGroup: {0}", this.ReleaseGroup);
         }
 
         public string GetSearchString()

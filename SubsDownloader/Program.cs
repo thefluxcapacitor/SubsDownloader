@@ -1,9 +1,11 @@
 ﻿namespace SubsDownloader
 {
     using System.Collections.Generic;
+    using System.Configuration;
     using System.Linq;
     using System;
     using System.IO;
+    using System.Windows.Forms;
 
     using Ionic.Zip;
 
@@ -15,8 +17,6 @@
     {
         static void Main(string[] args)
         {
-            //TODO: add verbose mode with app.config setting
-
             if (args.Length != 1)
             {
                 return;
@@ -25,14 +25,23 @@
             var media = File.Exists(args[0]) ? Path.GetFileNameWithoutExtension(args[0]) :
                 args[0].Split(new char[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries).Last();
 
-            GetSubsForTorrent(media, Path.GetDirectoryName(args[0]));
+            var targetFolder = Path.GetDirectoryName(args[0]);
+
+            var tempFolder = ConfigurationManager.AppSettings["tempFolder"];
+            tempFolder = tempFolder.Replace("{app}", Path.GetDirectoryName(Application.ExecutablePath)); 
+            tempFolder = tempFolder.Replace("{target}", targetFolder);
+
+            Console.WriteLine("Target folder: {0}", targetFolder);
+            Console.WriteLine("Temp folder: {0}", tempFolder);
+
+            GetSubsForTorrent(media, targetFolder, tempFolder);
 
             Console.WriteLine("Press any key to exit...");
             // TODO: support -noui switch. If switch is present, exit without prompting to press a key
             Console.ReadKey();
         }
 
-        private static void GetSubsForTorrent(string videoName, string targetFolder)
+        private static void GetSubsForTorrent(string videoName, string targetFolder, string tempFolder)
         {
             var video = new Video(videoName);
 
@@ -43,15 +52,16 @@
             {
                 // TODO: support -noui switch. If switch is present don't show the form and automatically download the sub with more downloads
 
+                Console.WriteLine("Showing list of matching subtitles, double-click to download");
                 var selectedSub = FrmShowSubs.SelectSub(subs);
                 if (selectedSub != null)
                 {
-                    // TODO: support specifiying the temp folder (through cmdline or app.config)
-
-                    var tempFolder = Path.Combine(targetFolder, "tmp");
                     var tempRarFile = Path.Combine(tempFolder, "subtmp.rar");
 
-                    Directory.Delete(tempFolder, true);
+                    if (Directory.Exists(tempFolder))
+                    {
+                        Directory.Delete(tempFolder, true);
+                    }
 
                     Console.WriteLine("Downloading sub to {0}", tempRarFile);
 
@@ -80,8 +90,6 @@
                             }
 
                             rarFilesExtracted.Add(rarFile);
-                            
-                            //File.Delete(rarFile); << TODO: fails. bug in RarArchive
                         }
 
                         rarFiles.Clear();
@@ -95,9 +103,24 @@
                     subFiles.AddRange(Directory.GetFiles(tempFolder, "*.sub", SearchOption.TopDirectoryOnly));
                     subFiles.AddRange(Directory.GetFiles(tempFolder, "*.srt", SearchOption.TopDirectoryOnly));
 
-                    if (subFiles.Where(item => item.Contains(video.ReleaseGroup)).Any())
+                    if (subFiles.Where(item => item.IndexOf(
+                        video.ReleaseGroup, StringComparison.OrdinalIgnoreCase) > -1).Any())
                     {
-                        subFiles.RemoveAll(item => !item.Contains(video.ReleaseGroup));
+                        subFiles.RemoveAll(item => item.IndexOf(video.ReleaseGroup, 
+                            StringComparison.OrdinalIgnoreCase) < 0);
+                    }
+                    else
+                    {
+                        Console.WriteLine("No subtitles matching ReleaseGroup found");
+                    }
+
+                    if (subFiles.Count == 1)
+                    {
+                        Console.WriteLine("Best match found, renaming to match video filename.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Mutiple subtitles found, leaving file names unmodified.");
                     }
 
                     foreach (var subFile in subFiles)
