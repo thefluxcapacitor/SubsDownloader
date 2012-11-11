@@ -1,11 +1,11 @@
-#How to add application in windows explorer context menu#
+###How to add shortcut in windows explorer context menu###
 http://www.howtogeek.com/107965/how-to-add-any-application-shortcut-to-windows-explorers-context-menu/
 
+![](images/shortcut-explorer-context-menu.png?raw=true)
 
+###File patterns###
 
-#File patterns#
-
-**Videos with patterns like these are currently supported by this app:**
+Videos with patterns like these are currently supported by SubsDownloader:
 
 <pre>
 A.Woman.A.Gun.And.A.Noodle.Shop.2009.DVDRip.XviD-FiCO.avi
