@@ -15,32 +15,52 @@
         {
             Console.WriteLine("Text used to seach subtitle is: {0}", video.GetSearchString());
 
+            var candidateSubs = new List<Sub>();
             var subdivxClient = new WebClient();
             subdivxClient.Headers["User-Agent"] = "Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))";
-            var output = subdivxClient.DownloadString(
-                string.Format(
-                    "http://www.subdivx.com/index.php?buscar={0}&accion=5&masdesc=&subtitulos=1&realiza_b=1",
-                    HttpUtility.UrlEncode(video.GetSearchString())));
 
-            var doc = new HtmlDocument();
-            doc.LoadHtml(output);
-            var subsHtmlNodes = doc.DocumentNode.Descendants("div").Where(div => div.GetAttributeValue("id", string.Empty).Equals("buscador_detalle"));
+            var page = 1;
 
-            var candidateSubs = new List<Sub>();
-
-            foreach (var subHtmlNode in subsHtmlNodes)
+            while (page > 0)
             {
-                var sub = new Sub(subHtmlNode);
+                var url = this.GetUrl(video.GetSearchString(), page);
+                var output = subdivxClient.DownloadString(url);
 
-                if (sub.Matches(video))
+                var doc = new HtmlDocument();
+                doc.LoadHtml(output);
+                var subsHtmlNodes = doc.DocumentNode.Descendants("div").Where(div => div.GetAttributeValue("id", string.Empty).Equals("buscador_detalle"));
+
+                if (subsHtmlNodes.Count() == 0)
                 {
-                    candidateSubs.Add(sub);
+                    page = -1;
                 }
+                else
+                {
+                    foreach (var subHtmlNode in subsHtmlNodes)
+                    {
+                        var sub = new Sub(subHtmlNode);
+
+                        if (sub.Matches(video))
+                        {
+                            candidateSubs.Add(sub);
+                        }
+                    }
+                }
+
+                page++;
             }
 
             candidateSubs.Sort(new Sub.SubComparer());
 
             return candidateSubs;
+        }
+
+        private string GetUrl(string searchString, int page)
+        {
+            return string.Format(
+                "http://www.subdivx.com/index.php?buscar={0}&accion=5&masdesc=&subtitulos=1&realiza_b=1&pg={1}",
+                HttpUtility.UrlEncode(searchString), 
+                page);
         }
 
         public void DownloadSub(string path, string downloadUrl)

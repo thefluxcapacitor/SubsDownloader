@@ -37,7 +37,6 @@
             GetSubsForTorrent(media, targetFolder, tempFolder);
 
             Console.WriteLine("Press any key to exit...");
-            // TODO: support -noui switch. If switch is present, exit without prompting to press a key
             Console.ReadKey();
         }
 
@@ -50,8 +49,6 @@
 
             if (subs.Any())
             {
-                // TODO: support -noui switch. If switch is present don't show the form and automatically download the sub with more downloads
-
                 Console.WriteLine("Showing list of matching subtitles, double-click to download");
                 var selectedSub = FrmShowSubs.SelectSub(subs);
                 if (selectedSub != null)
