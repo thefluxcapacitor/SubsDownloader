@@ -34,16 +34,15 @@
             Console.WriteLine("Target folder: {0}", targetFolder);
             Console.WriteLine("Temp folder: {0}", tempFolder);
 
-            GetSubsForTorrent(media, targetFolder, tempFolder);
+            var video = new Video(media);
+            GetSubsForTorrent(video, media, targetFolder, tempFolder);
 
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
 
-        private static void GetSubsForTorrent(string videoName, string targetFolder, string tempFolder)
+        private static void GetSubsForTorrent(Video video, string videoName, string targetFolder, string tempFolder)
         {
-            var video = new Video(videoName);
-
             var subDivXManager = new SubDivXManager();
             var subs = subDivXManager.GetCandidateSubs(video);
 
@@ -139,7 +138,18 @@
             }
             else
             {
-                Console.WriteLine("No subs were found");
+                Console.WriteLine("No subs were found. Do you want to specify search values? (Y/N)");
+                var key = Console.ReadKey();
+                Console.WriteLine();
+
+                if (key.KeyChar == 'Y' || key.KeyChar == 'y')
+                {
+                    video = FrmVideoInfo.GetVideoInfo(video);
+                    if (video != null)
+                    {
+                        GetSubsForTorrent(video, videoName, targetFolder, tempFolder);
+                    }
+                }
             }
         }
     }

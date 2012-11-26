@@ -20,13 +20,13 @@
 
         public int Year { get; set; }
 
-        public string TorrentName { get; set; }
+        public Video()
+        {
+        }
 
         public Video(string torrentName)
         {
             this.knownShows = ConfigurationManager.AppSettings["knownTvShows"].Split(new char[] { ',' });
-
-            this.TorrentName = torrentName;
 
             if (this.ParseTvShow(torrentName))
             {

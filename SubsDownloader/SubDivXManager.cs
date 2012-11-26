@@ -13,7 +13,9 @@
     {
         public IList<Sub> GetCandidateSubs(Video video)
         {
+            Console.WriteLine();
             Console.WriteLine("Text used to seach subtitle is: {0}", video.GetSearchString());
+            Console.WriteLine("Release Group to match: {0}", video.ReleaseGroup);
 
             var candidateSubs = new List<Sub>();
             var subdivxClient = new WebClient();
