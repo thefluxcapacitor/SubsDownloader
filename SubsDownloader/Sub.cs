@@ -39,7 +39,7 @@
                 .First().GetAttributeValue("href", string.Empty);
 
             this.Cds = int.Parse(this.ExtractBetween(html.InnerHtml, "<b>Cds:</b>", "<b>Comentarios:</b>"));
-            this.Downloads = int.Parse(this.ExtractBetween(html.InnerHtml, "<b>Downloads:</b>", "<b>Cds:</b>"));
+            this.Downloads = int.Parse(this.ExtractBetween(html.InnerHtml, "<b>Downloads:</b>", "<b>Cds:</b>").Replace(",", string.Empty));
             
             this.SetSubsTeam();
         }
