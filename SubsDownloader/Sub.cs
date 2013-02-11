@@ -13,6 +13,8 @@
 
         public string Description { get; set; }
 
+        public string Comments { get; set; }
+
         public string DownloadUrl { get; set; }
 
         public int Cds { get; set; }
@@ -21,7 +23,7 @@
 
         public string SubsTeam { get; set; }
 
-        public Sub(HtmlNode html)
+        public Sub(HtmlNode html, string subComments)
         {
             if (Sub.PreferredSubsTeams.Count == 0)
             {
@@ -40,7 +42,9 @@
 
             this.Cds = int.Parse(this.ExtractBetween(html.InnerHtml, "<b>Cds:</b>", "<b>Comentarios:</b>"));
             this.Downloads = int.Parse(this.ExtractBetween(html.InnerHtml, "<b>Downloads:</b>", "<b>Cds:</b>").Replace(",", string.Empty));
-            
+
+            this.Comments = subComments;
+
             this.SetSubsTeam();
         }
 
@@ -70,21 +74,26 @@
 
         public bool Matches(Video video)
         {
-            var pos = this.Description.IndexOf(video.ReleaseGroup, StringComparison.OrdinalIgnoreCase);
+            return this.Matches(video, this.Description) || this.Matches(video, this.Comments);
+        }
+
+        private bool Matches(Video video, string content)
+        {
+            var pos = content.IndexOf(video.ReleaseGroup, StringComparison.OrdinalIgnoreCase);
 
             if (pos < 0)
             {
                 return false;
             }
 
-            if (pos > 0 && char.IsLetterOrDigit(this.Description[pos - 1]))
+            if (pos > 0 && char.IsLetterOrDigit(content[pos - 1]))
             {
                 return false;
             }
 
-            if (pos + video.ReleaseGroup.Length < this.Description.Length)
+            if (pos + video.ReleaseGroup.Length < content.Length)
             {
-                if (char.IsLetterOrDigit(this.Description[pos + video.ReleaseGroup.Length]))
+                if (char.IsLetterOrDigit(content[pos + video.ReleaseGroup.Length]))
                 {
                     return false;
                 }

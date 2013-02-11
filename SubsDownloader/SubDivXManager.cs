@@ -11,7 +11,7 @@
 
     public class SubDivXManager
     {
-        public IList<Sub> GetCandidateSubs(Video video)
+        public IList<Sub> GetCandidateSubs(Video video, bool searchInComments)
         {
             Console.WriteLine();
             Console.WriteLine("Text used to seach subtitle is: {0}", video.GetSearchString());
@@ -40,7 +40,13 @@
                 {
                     foreach (var subHtmlNode in subsHtmlNodes)
                     {
-                        var sub = new Sub(subHtmlNode);
+                        var subComments = string.Empty;
+                        if (searchInComments)
+                        {
+                            subComments = this.GetSubComments(subdivxClient, subHtmlNode);
+                        }
+
+                        var sub = new Sub(subHtmlNode, subComments);
 
                         if (sub.Matches(video))
                         {
@@ -55,6 +61,23 @@
             candidateSubs.Sort(new Sub.SubComparer());
 
             return candidateSubs;
+        }
+
+        private string GetSubComments(WebClient webClient, HtmlNode subHtmlNode)
+        {
+            var aux = subHtmlNode.InnerHtml;
+            var i = aux.IndexOf("href=\"popcoment.php?idsub=", System.StringComparison.OrdinalIgnoreCase);
+            var j = aux.IndexOf("\"", i + "href=\"".Length, System.StringComparison.OrdinalIgnoreCase);
+
+            if (i > -1 && i < j)
+            {
+                var start = i + "href=\"".Length;
+                var url = "http://subdivx.com/" + aux.Substring(start, j - start);
+                var comments = webClient.DownloadString(url);
+                return comments;
+            }
+
+            return string.Empty;
         }
 
         private string GetUrl(string searchString, int page)

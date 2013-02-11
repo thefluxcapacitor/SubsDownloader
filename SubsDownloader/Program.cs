@@ -15,6 +15,7 @@
 
     class Program
     {
+        [STAThreadAttribute]
         static void Main(string[] args)
         {
             if (args.Length != 1)
@@ -41,10 +42,10 @@
             Console.ReadKey();
         }
 
-        private static void GetSubsForTorrent(Video video, string videoName, string targetFolder, string tempFolder)
+        private static void GetSubsForTorrent(Video video, string videoName, string targetFolder, string tempFolder, bool searchInComments = false)
         {
             var subDivXManager = new SubDivXManager();
-            var subs = subDivXManager.GetCandidateSubs(video);
+            var subs = subDivXManager.GetCandidateSubs(video, searchInComments);
 
             if (subs.Any())
             {
@@ -138,16 +139,24 @@
             }
             else
             {
-                Console.WriteLine("No subs were found. Do you want to specify search values? (Y/N)");
-                var key = Console.ReadKey();
-                Console.WriteLine();
-
-                if (key.KeyChar == 'Y' || key.KeyChar == 'y')
+                if (!searchInComments)
                 {
-                    video = FrmVideoInfo.GetVideoInfo(video);
-                    if (video != null)
+                    Console.WriteLine("No subs were found. Searching for release group within comments.");
+                    GetSubsForTorrent(video, videoName, targetFolder, tempFolder, true);
+                }
+                else
+                {
+                    Console.WriteLine("No subs were found. Do you want to specify search values? (Y/N)");
+                    var key = Console.ReadKey();
+                    Console.WriteLine();
+
+                    if (key.KeyChar == 'Y' || key.KeyChar == 'y')
                     {
-                        GetSubsForTorrent(video, videoName, targetFolder, tempFolder);
+                        video = FrmVideoInfo.GetVideoInfo(video);
+                        if (video != null)
+                        {
+                            GetSubsForTorrent(video, videoName, targetFolder, tempFolder);
+                        }
                     }
                 }
             }
