@@ -8,6 +8,7 @@
     using System.Linq;
     using System.Net;
     using System.Text;
+    using System.Threading;
     using System.Web;
 
     using HtmlAgilityPack;
@@ -16,7 +17,7 @@
     {
         private CookieContainer loginCookies = new CookieContainer();
 
-        public IList<Sub> GetCandidateSubs(Video video, bool searchInComments)
+        public IList<Sub> GetCandidateSubs(Video video, bool searchInComments, Dictionary<string, string> cache)
         {
             Console.WriteLine();
             Console.WriteLine("Text used to seach subtitle is: {0}", video.GetSearchString());
@@ -34,8 +35,17 @@
             {
                 var url = this.GetUrl(video.GetSearchString(), page);
 
-                var output = subdivxClient.DownloadString(url);
-                
+                string output;
+                if (cache.ContainsKey(url))
+                {
+                    output = cache[url];
+                }
+                else
+                {
+                    output = subdivxClient.DownloadString(url);
+                    cache.Add(url, output);
+                }
+
                 var doc = new HtmlDocument();
                 doc.LoadHtml(output);
                 var subsHtmlNodes = doc.DocumentNode.Descendants("div").Where(div => div.GetAttributeValue("id", string.Empty).Equals("buscador_detalle"));

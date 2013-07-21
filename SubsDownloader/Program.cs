@@ -42,10 +42,12 @@
             Console.ReadKey();
         }
 
+        private static Dictionary<string, string> cache = new Dictionary<string, string>();
+
         private static void GetSubsForTorrent(Video video, string videoName, string targetFolder, string tempFolder, bool searchInComments = false)
         {
             var subDivXManager = new SubDivXManager();
-            var subs = subDivXManager.GetCandidateSubs(video, searchInComments);
+            var subs = subDivXManager.GetCandidateSubs(video, searchInComments, cache);
 
             if (subs.Any())
             {
