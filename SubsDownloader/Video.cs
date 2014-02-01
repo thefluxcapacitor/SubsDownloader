@@ -1,13 +1,11 @@
 ﻿namespace SubsDownloader
 {
     using System;
-    using System.Configuration;
+    using System.Diagnostics;
     using System.Text.RegularExpressions;
 
     public class Video
     {
-        private string[] knownShows;
-
         public string Episode { get; set; }
 
         public string Season { get; set; }
@@ -26,76 +24,125 @@
 
         public Video(string torrentName)
         {
-            this.knownShows = ConfigurationManager.AppSettings["knownTvShows"].Split(new char[] { ',' });
-
-            if (this.ParseTvShow(torrentName))
+            if (string.IsNullOrEmpty(torrentName) || string.IsNullOrEmpty(torrentName))
             {
-                this.ParseSeasonEpisode(torrentName);
+                return;
             }
 
-            this.ParseReleaseGroup(torrentName);
+            torrentName = torrentName.Trim();
 
-            this.ParseYear(torrentName);
+            if (string.IsNullOrEmpty(torrentName))
+            {
+                return;
+            }
+
+            if (torrentName.EndsWith("mp4", StringComparison.OrdinalIgnoreCase) || 
+                torrentName.EndsWith("avi", StringComparison.OrdinalIgnoreCase))
+            {
+                torrentName = torrentName.Remove(torrentName.Length - 3).Trim();
+            }
+
+            int endingPosition;
+            if (!this.ParseTvShow(torrentName, out endingPosition))
+            {
+                this.ParseYearAndTitle(torrentName, out endingPosition);
+            }
+
+            this.ParseReleaseGroup(torrentName, endingPosition);
         }
 
-        private void ParseSeasonEpisode(string torrentName)
+        private void ParseSeasonEpisode(string torrentName, out Match match)
         {
             var regex = new Regex(@"[s,S][0-9]{2}[e,E][0-9]{2}");
-            var result = regex.Match(torrentName);
+            match = regex.Match(torrentName);
 
-            if (result.Success)
+            if (match.Success)
             {
-                this.Season = torrentName.Substring(result.Index + 1, 2);
-                this.Episode = torrentName.Substring(result.Index + 4, 2);
+                this.Season = torrentName.Substring(match.Index + 1, 2);
+                this.Episode = torrentName.Substring(match.Index + 4, 2);
             }
             else
             {
                 // This is the case of big bang theory and others (601 = season 6 episode 01)
-                regex = new Regex(@"[\.,\s][0-9]{3}[\.,\s]");
-                result = regex.Match(torrentName);
+                regex = new Regex(@"[\.,\-,\s][0-9]{3}($|[\.,\-,\s])");
+                match = regex.Match(torrentName);
 
-                if (result.Success)
+                if (match.Success)
                 {
-                    this.Season = string.Format("{0:D2}", int.Parse(torrentName.Substring(result.Index + 1, 1)));
-                    this.Episode = torrentName.Substring(result.Index + 2, 2);
+                    this.Season = string.Format("{0:D2}", int.Parse(torrentName.Substring(match.Index + 1, 1)));
+                    this.Episode = torrentName.Substring(match.Index + 2, 2);
+                }
+                else
+                {
+                    // 6x9 or 6x10
+                    regex = new Regex(@"[\.,\-,\s][0-9]{1}[x,X][0-9]{1,2}($|[\.,\-,\s])");
+                    match = regex.Match(torrentName);
+
+                    if (match.Success)
+                    {
+                        this.Season = string.Format("{0:D2}", int.Parse(torrentName.Substring(match.Index + 1, 1)));
+
+                        int auxNumber;
+                        var aux = torrentName.Substring(match.Index + 3, 2);
+                        if (!int.TryParse(aux, out auxNumber))
+                        {
+                            auxNumber = int.Parse(torrentName.Substring(match.Index + 3, 1));
+                        }
+
+                        this.Episode = string.Format("{0:D2}", auxNumber);
+                    }
                 }
             }
 
-            Console.WriteLine("Season: {0}, Episode: {1}", this.Season, this.Episode); 
+            Debug.WriteLine("Season: {0}, Episode: {1}", this.Season, this.Episode); 
         }
 
-        private bool ParseTvShow(string torrentName)
+        private bool ParseTvShow(string torrentName, out int endingPosition)
         {
+            endingPosition = -1;
+
             if (!this.TvShow.HasValue)
             {
                 this.TvShow = false;
 
-                foreach (var show in this.knownShows)
+                Match match;
+                this.ParseSeasonEpisode(torrentName, out match);
+
+                if (match.Success)
                 {
-                    if ((torrentName.IndexOf(show, StringComparison.OrdinalIgnoreCase) > -1)
-                        || (torrentName.IndexOf(show.Replace(' ', '.'), StringComparison.OrdinalIgnoreCase) > -1))
+                    var aux = torrentName.Substring(0, match.Index).Replace('.', ' ').Trim();
+                    for (var i = aux.Length - 1; i >= 0; i--)
                     {
-                        this.Title = show.Replace('.', ' ');
-                        this.TvShow = true;
-                        break;
+                        if (char.IsLetterOrDigit(aux[i]))
+                        {
+                            aux = aux.Substring(0, i + 1);
+                            break;
+                        }
                     }
+
+                    this.Title = aux; 
+                    this.TvShow = true;
+                    
+                    endingPosition = match.Index + match.Length;
                 }
 
-                if (this.TvShow.Value)
+                if (this.TvShow.HasValue && this.TvShow.Value)
                 {
-                    Console.WriteLine("Video evaluated as a TV show: {0}", this.Title);
+                    Debug.WriteLine("Video evaluated as a TV show: {0}", this.Title);
                 }
                 else
                 {
-                    Console.WriteLine("Video evaluated as a movie: {0}", this.Title);
+                    Debug.WriteLine("Video evaluated as a movie: {0}", this.Title);
                 }
             }
 
-            return this.TvShow.Value;
+            return this.TvShow.HasValue && this.TvShow.Value;
         }
 
-        private void ParseYear(string torrentName)
+        private void ParseYearAndTitle(string torrentName, out int endingPosition)
         {
+            endingPosition = -1;
+
             var consecutiveDigits = 0;
             var lastCharIsDigit = false;
 
@@ -123,45 +170,89 @@
 
                         if (string.IsNullOrEmpty(this.Title))
                         {
-                            this.Title = torrentName.Substring(0, i - 5).Replace('.', ' ');
+                            this.Title = torrentName.Substring(0, i - 5).Replace('.', ' ').Trim();
                         }
 
-                        consecutiveDigits = 0;
+                        endingPosition = i;
+
+                        break;
                     }
                 }
             }
 
-            Console.WriteLine("Year: {0}", this.Year);
+            if (this.Year == 0 && consecutiveDigits == 4)
+            {
+                this.Year = int.Parse(torrentName.Substring(torrentName.Length - 4, 4));
+
+                if (string.IsNullOrEmpty(this.Title))
+                {
+                    this.Title = torrentName.Substring(0, torrentName.Length - 5).Replace('.', ' ');
+                }
+
+                endingPosition = torrentName.Length;
+            }
+            else if (this.Year == 0 && consecutiveDigits != 4)
+            {
+                var titleAssigned = false;
+                for (var i = 0; i < torrentName.Length; i++)
+                {
+                    if (!char.IsLetterOrDigit(torrentName[i]) && torrentName[i] != ' ')
+                    {
+                        this.Title = torrentName.Substring(0, i).Trim();
+                        endingPosition = i;
+                        titleAssigned = true;
+                        break;
+                    }
+                }
+
+                if (!titleAssigned)
+                {
+                    this.Title = torrentName;
+                    endingPosition = torrentName.Length;
+                }
+            }
+
+            Debug.WriteLine("Title: {0}", this.Title);
+            Debug.WriteLine("Year: {0}", this.Year);
         }
 
-        private void ParseReleaseGroup(string torrentName)
+        private void ParseReleaseGroup(string torrentName, int startingPosition)
         {
             var releaseGroup = string.Empty;
 
-            for (var j = torrentName.Length - 1; j >= 0; j--)
+            if (!string.IsNullOrEmpty(torrentName) && startingPosition > 0)
             {
-                if (torrentName[j] == '-')
+                if (torrentName.Length > startingPosition)
                 {
-                    break;
-                }
+                    for (var j = torrentName.Length - 1; j >= startingPosition; j--)
+                    {
+                        if (!char.IsLetterOrDigit(torrentName[j]) && torrentName[j] != '[' && torrentName[j] != ']')
+                        {
+                            break;
+                        }
 
-                releaseGroup = torrentName[j] + releaseGroup;
+                        if (torrentName[j] != '[' && torrentName[j] != ']')
+                        {
+                            releaseGroup = torrentName[j] + releaseGroup;
+                        }
+                    }
+                }
             }
 
-            this.ReleaseGroup = releaseGroup;
+            this.ReleaseGroup = releaseGroup.Trim();
 
-            Console.WriteLine("ReleaseGroup: {0}", this.ReleaseGroup);
+            Debug.WriteLine("ReleaseGroup: {0}", this.ReleaseGroup);
         }
 
         public string GetSearchString()
         {
-            if (this.TvShow.Value)
+            if (this.TvShow.HasValue && this.TvShow.Value)
             {
                 return string.Format("{0} S{1}E{2}", this.Title, this.Season, this.Episode);
             }
             else
             {
-                return string.Format("{0} {1}", this.Title, this.Year);
+                return string.Format("{0} {1}", this.Title, this.Year > 0 ? this.Year.ToString() : string.Empty);
             }
         }
     }
